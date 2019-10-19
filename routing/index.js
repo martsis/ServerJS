@@ -97,4 +97,4 @@ const defineRoute = function(req, res, postData){
     }
 };
 
-exports.defineRoute = defineRoute;
+module.exports.defineRoute = defineRoute;
