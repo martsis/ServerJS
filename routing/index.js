@@ -1,25 +1,29 @@
 // routing/index.js
 const url = require('url');
 const fs = require('fs');
+const ejs = require('ejs');
+const path = require('path');
+const configuration = require('../configuration');
+const framework = require('../framework');
 
-const define = function(req, res, postData){
+const defineRoute = function(req, res, postData){
     // получаем адрес
     const urlParsed = url.parse(req.url, true);
-    let path = urlParsed.pathname.slice(1);
-    //path = path.slice(1);
+    let filePath = urlParsed.pathname.slice(1);
+    //filePath = filePath.slice(1);
 
-    let controller = path.split('/')[0];
-    let action = path.split('/')[1];
-    let id = path.split('/')[2];
+    let controller = filePath.split('/')[0];
+    let action = filePath.split('/')[1];
+    let id = filePath.split('/')[2];
 
     if (typeof controller != 'string' || controller == ''){
-        controller = 'default';
+        controller = configuration.homePage.controller;
     } else {
         controller = controller.toLowerCase();
     }
 
     if (typeof action != 'string' || action == ''){
-        action = 'index';
+        action = configuration.homePage.action;
     } else {
         action = action.toLowerCase();
     }
@@ -46,8 +50,8 @@ const define = function(req, res, postData){
         const controllerName = `${controller}Controller`.charAt(0).toUpperCase() + `${controller}Controller`.slice(1);
         const controllerConstructor = routeDestination[controllerName];
         const controllerImplemented = new controllerConstructor(req, res, postData);
-        
-        res.writeHead(200, {'Content-Type': 'text/html'});
+
+        res.writeHead(res.statusCode, {'Content-Type': 'text/html'});
 
         try{
             if (id === -1){
@@ -56,30 +60,41 @@ const define = function(req, res, postData){
                 controllerImplemented[action](id);
             }
         } catch (err){
-            console.log(err);
-            res.end(`Action not found: ${err}`);
+            const modelView = new framework.ModelView({
+                name: '404'
+            });
+            modelView.error = err;
+            modelView.title = 'Action not found';
+            res.statusCode = 404;
+            res.writeHead(res.statusCode, {'Content-Type': 'text/html'});
+
+            ejs.renderFile(`${framework.params.fileRoot}${path.sep}view${path.sep}404.ejs`, modelView, (err, str) => {
+                if (err){
+                    res.end(`Error: ${err}`);
+                } else {
+                    res.end(str);
+                }
+            });
         }
-
-
-        // routeDestination.promise(res, postData, req).then(
-        //     result => {
-        //         res.writeHead(200);
-        //         res.end(result);
-        //     },
-        //     resolve => {
-        //         let endMessage = {};
-        //         endMessage.error = 1;
-        //         endMessage.errorName = resolve;
-        //         res.end(JSON.stringify(endMessage));
-        //         return;
-        //     }
-        // );
     }
     catch (err){
         // страница не найдена
-        console.log(err);
-        res.end(`API not found: ${err}`);
+        const modelView = new framework.ModelView({
+            name: '404'
+        });
+        modelView.error = err;
+        modelView.title = 'Controller not found';
+        res.statusCode = 404;
+        res.writeHead(res.statusCode, {'Content-Type': 'text/html'});
+
+        ejs.renderFile(`${framework.params.fileRoot}${path.sep}view${path.sep}404.ejs`, modelView, (err, str) => {
+            if (err){
+                res.end(`Error: ${err}`);
+            } else {
+                res.end(str);
+            }
+        });
     }
 };
 
-exports.define = define;
+exports.defineRoute = defineRoute;

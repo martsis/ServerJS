@@ -18,7 +18,7 @@ const server = new http.Server(function(req, res){
 
     // информации больше нет. передаем дальше
     req.on('end', () => {
-        routing.define(req, res, jsonString);
+        routing.defineRoute(req, res, jsonString);
     });
 });
 

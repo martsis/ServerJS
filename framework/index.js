@@ -1,5 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const ejs = require('ejs');
+const configuration = require('../configuration');
+
 const params = {
     fileRoot: ''
 };
@@ -16,57 +19,35 @@ class Controller{
             this.model.id = id;
         }
 
-        const modelView = new ModelView();
+        const modelView = new ModelView({
+            name: 'index'
+        });
 
-        modelView.title = 'Hello, World!';
-        modelView.text = 'Welcome!';
+        modelView.title = 'Default!';
 
-        try{
-            this.render(modelView);
-            //this.response.end(`Default Controller;\n${this.model.id}`);
-        } catch (err){
-            console.log(err);
-            this.response.end(`Render not found: ${err}`);
-        }
+        this.render(modelView);
     }
 
     render(modelView){
         try{
             // смотрим, есть ли такой файл
-            const name = this.constructor.name.slice(0, this.constructor.name.indexOf('Controller'));
-            let filePath = `${params.fileRoot}${path.sep}view${path.sep}${name.toLowerCase()}${path.sep}index.html`;
+            let filePath = `${params.fileRoot}${path.sep}view${path.sep}${modelView.name.toLowerCase()}${path.sep}${modelView.name}.ejs`;
             
             fs.stat(filePath, (err, stat) => {
                 if (err){
-                    filePath = `${params.fileRoot}${path.sep}view${path.sep}default${path.sep}index.html`;
+                    filePath = `${params.fileRoot}${path.sep}view${path.sep}${modelView.name}.ejs`;
                 }
-                
-                fs.readFile(filePath, "utf8", (error, data) => {
-                    if(error){      
-                        let text = '';
-    
-                        for (const key of Object.keys(modelView)){
-                            text += `${modelView[key]}`;
-                        }
-    
+
+                ejs.renderFile(filePath, modelView, (err, str) => {
+                    if (err){
                         this.response.statusCode = 200;
-                        this.response.end(`Resourse not found!\nPath: ${filePath}`);
-                    }   
-                    else{
-                        if (Object.keys(modelView).length > 0){
-                            for (const key of Object.keys(modelView)){
-                                while (data.indexOf(`{${key}}`) != -1){
-                                    data = data.replace(`{${key}}`, modelView[key]);
-                                }
-                            }
-                        }
-    
+                        this.response.end(`<br>Error: ${err}<br>Path: ${filePath}`);
+                    } else {
                         this.response.statusCode = 200;
-                        this.response.end(data);
+                        this.response.end(str);
                     }
                 });
             });
-
 
         } catch (err){
             console.log(err);
@@ -76,10 +57,12 @@ class Controller{
 }
 
 class ModelView{
-    constructor(){
-        this.title;
+    constructor(option = {name: 'index', title}){
+        this.name = option.name;
+        this.title = option.title;
     }
 }
 
 exports.Controller = Controller;
+exports.ModelView = ModelView;
 exports.params = params;
